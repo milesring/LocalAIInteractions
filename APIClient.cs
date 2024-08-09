@@ -26,6 +26,11 @@ namespace LocalAIInteractions
 
         public string? Port { get; set; }
 
+        /// <summary>
+        /// HttpClient Timeout in seconds
+        /// </summary>
+        public int Timeout { get; set; }
+
         public APIClient()
         {
             
@@ -34,6 +39,13 @@ namespace LocalAIInteractions
         {
             Hostname = hostName;
             Port = port;
+        }
+
+        public APIClient(string hostName, string port, int timeout)
+        {
+            Hostname = hostName;
+            Port = port;
+            Timeout = timeout;
         }
 
         /// <summary>
@@ -46,13 +58,16 @@ namespace LocalAIInteractions
         /// <exception cref="Exception"></exception>
         /// <exception cref="HttpRequestException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        //TODO: Return just the message object and let the user decide how to use it
         public async Task<Message> Chat(string message, double temperature = 0.7, ChatConversation existingConversation = null)
         {
             CheckEndpointVariables();
 
             using (var client = new HttpClient())
             {
+                if (Timeout > 0)
+                {
+                    client.Timeout = TimeSpan.FromSeconds(Timeout);
+                }
                 var request = new ChatRequest()
                 {
                     Model = Models.Gemma2,
@@ -145,6 +160,10 @@ namespace LocalAIInteractions
 
             using (var client = new HttpClient())
             {
+                if (Timeout > 0)
+                {
+                    client.Timeout = TimeSpan.FromSeconds(Timeout);
+                }
                 var extension = Path.GetExtension(imagePath).Substring(1);
                 var mimeType = _mimeTypes[extension];
                 var imageBytes = Utility.Image.EncodeImageToBase64(imagePath);
@@ -205,6 +224,10 @@ namespace LocalAIInteractions
             }
             using (var client = new HttpClient())
             {
+                if (Timeout > 0)
+                {
+                    client.Timeout = TimeSpan.FromSeconds(Timeout);
+                }
                 var imageRequest = new ImageRequest()
                 {
                     Model = Models.StableDiffisuion,
