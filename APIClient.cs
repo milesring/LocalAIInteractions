@@ -81,8 +81,11 @@ namespace LocalAIInteractions
                 //insert existing conversation if it exists
                 if (existingConversation != null)
                 {
-                    existingConversation.Messages.Add(userMessage);
-                    request.Messages = existingConversation.Messages.ToArray();
+                    List<Message> messagesCopy = new(existingConversation.Messages)
+                    {
+                        userMessage
+                    };
+                    request.Messages = messagesCopy.ToArray();
                 }
                 else
                 {
