@@ -155,8 +155,12 @@ namespace LocalAIInteractions
             {
                 throw new ArgumentNullException(imagePath);
             }
-
-            if (!File.Exists(imagePath))
+            bool isUrl = false;
+            if(!(new Uri(imagePath)).Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) && Uri.IsWellFormedUriString(imagePath, UriKind.RelativeOrAbsolute))
+            {
+                isUrl = true;
+            }
+            else if (!File.Exists(imagePath))
             {
                 throw new FileNotFoundException(imagePath);
             }
@@ -167,9 +171,29 @@ namespace LocalAIInteractions
                 {
                     client.Timeout = TimeSpan.FromSeconds(Timeout);
                 }
-                var extension = Path.GetExtension(imagePath).Substring(1);
-                var mimeType = _mimeTypes[extension];
-                var imageBytes = Utility.Image.EncodeImageToBase64(imagePath);
+                var imageContent = new ImageContent()
+                {
+                    Type = "image_url"
+                };
+
+                if (isUrl)
+                {
+                    imageContent.Image = new ImageUrl()
+                    {
+                        Url = imagePath
+                    };
+                }
+                else
+                {
+                    var extension = Path.GetExtension(imagePath).Substring(1);
+                    var mimeType = _mimeTypes[extension];
+                    var imageBytes = Utility.Image.EncodeImageToBase64(imagePath);
+                    imageContent.Image = new ImageUrl()
+                    {
+                        Url = $"data:image/{mimeType};base64,{imageBytes}"
+                    };
+                }
+
                 var imageRequest = new ImageChatRequest()
                 {
                     Model = Models.GPT4Vision,
@@ -183,12 +207,7 @@ namespace LocalAIInteractions
                                     Type = "text",
                                     Text = "Describe this image"
                                 },
-                                new ImageContent(){
-                                    Type = "image_url",
-                                    Image = new ImageUrl(){
-                                        Url = $"data:image/{mimeType};base64,{imageBytes}"
-                                    }
-                                }
+                                imageContent
                             ]
                         }
                     ]
