@@ -58,9 +58,10 @@ namespace LocalAIInteractions
         /// <exception cref="Exception"></exception>
         /// <exception cref="HttpRequestException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task<Message> Chat(string message, double temperature = 0.7, ChatConversation existingConversation = null)
+        public async Task<Message> Chat(string message, string model = null, double temperature = 0.7, ChatConversation existingConversation = null)
         {
             CheckEndpointVariables();
+            model = model ?? Models.Gemma2;
 
             using (var client = new HttpClient())
             {
@@ -70,7 +71,7 @@ namespace LocalAIInteractions
                 }
                 var request = new ChatRequest()
                 {
-                    Model = Models.Gemma2,
+                    Model = model,
                     Temperature = temperature
                 };
                 var userMessage = new Message()
