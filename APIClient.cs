@@ -143,15 +143,18 @@ namespace LocalAIInteractions
         /// <summary>
         /// Sends an image to the endpoint do be described
         /// </summary>
-        /// <param name="imagePath">Filepath to the image</param>
-        /// <returns>Message with description</returns>
+        /// <param name="imagePath">Filepath or URL of the image to process</param>
+        /// <param name="prompt">Prompt for the endpoint to process, defaults to describe the image</param>
+        /// <param name="model">Selected model to use, defaults to llava</param>
+        /// <returns>Completed message</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<Message> RecognizeImage(string imagePath, string model = null)
+        public async Task<Message> RecognizeImage(string imagePath, string prompt = null ,string model = null)
         {
             CheckEndpointVariables();
-            model = model ?? "llava-llama-3-8b-v1_1";
+            model = string.IsNullOrWhiteSpace(model) ? "llava-llama-3-8b-v1_1" : model;
+            prompt = string.IsNullOrWhiteSpace(prompt) ? "Describe this image" : prompt;
             if (string.IsNullOrWhiteSpace(imagePath))
             {
                 throw new ArgumentNullException(imagePath);
@@ -206,7 +209,7 @@ namespace LocalAIInteractions
                             [
                                 new ImageContent(){
                                     Type = "text",
-                                    Text = "Describe this image"
+                                    Text = prompt
                                 },
                                 imageContent
                             ]
