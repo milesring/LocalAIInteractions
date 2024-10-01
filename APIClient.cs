@@ -148,10 +148,10 @@ namespace LocalAIInteractions
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<Message> RecognizeImage(string imagePath)
+        public async Task<Message> RecognizeImage(string imagePath, string model = null)
         {
             CheckEndpointVariables();
-
+            model = model ?? "llava-llama-3-8b-v1_1";
             if (string.IsNullOrWhiteSpace(imagePath))
             {
                 throw new ArgumentNullException(imagePath);
