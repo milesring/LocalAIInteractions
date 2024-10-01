@@ -197,7 +197,7 @@ namespace LocalAIInteractions
 
                 var imageRequest = new ImageChatRequest()
                 {
-                    Model = Models.GPT4Vision,
+                    Model = model,
                     Messages =
                     [
                         new ImageMessage(){
