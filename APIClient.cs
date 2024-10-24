@@ -233,10 +233,104 @@ namespace LocalAIInteractions
         }
 
         /// <summary>
+        /// Sends a video URL to the endpoint do be described
+        /// </summary>
+        /// <param name="videoPath">URL of video to be described</param>
+        /// <param name="prompt">Prompt for the endpoint to follow</param>
+        /// <param name="model">Model to be used</param>
+        /// <returns>Completed message</returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="FileNotFoundException"></exception>
+        /// <exception cref="Exception"></exception>
+        public async Task<Message> RecognizeVideo(string videoPath, string prompt = null, string model = null)
+        {
+            CheckEndpointVariables();
+            model = string.IsNullOrWhiteSpace(model) ? "gpt-4o" : model;
+            prompt = string.IsNullOrWhiteSpace(prompt) ? "Describe this video" : prompt;
+            if (string.IsNullOrWhiteSpace(videoPath))
+            {
+                throw new ArgumentNullException(videoPath);
+            }
+            bool isUrl = false;
+            if (!(new Uri(videoPath)).Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) && Uri.IsWellFormedUriString(videoPath, UriKind.RelativeOrAbsolute))
+            {
+                isUrl = true;
+            }
+            else if (!File.Exists(videoPath))
+            {
+                throw new FileNotFoundException(videoPath);
+            }
+
+            using (var client = new HttpClient())
+            {
+                if (Timeout > 0)
+                {
+                    client.Timeout = TimeSpan.FromSeconds(Timeout);
+                }
+                var imageContent = new ImageContent()
+                {
+                    Type = "video_url"
+                };
+
+
+                //only support url for now
+                if (isUrl)
+                {
+                    imageContent.Video = new ImageUrl()
+                    {
+                        Url = videoPath
+                    };
+                }
+                //else
+                //{
+                //    var extension = Path.GetExtension(videoPath).Substring(1);
+                //    var mimeType = _mimeTypes[extension];
+                //    var imageBytes = Utility.Image.EncodeImageToBase64(videoPath);
+                //    imageContent.Image = new ImageUrl()
+                //    {
+                //        Url = $"data:image/{mimeType};base64,{imageBytes}"
+                //    };
+                //}
+
+                var videoRequest = new ImageChatRequest()
+                {
+                    Model = model,
+                    Messages =
+                    [
+                        new ImageMessage(){
+                            Role = Role.User,
+                            Content =
+                            [
+                                new ImageContent(){
+                                    Type = "text",
+                                    Text = prompt
+                                },
+                                imageContent
+                            ]
+                        }
+                    ]
+                };
+
+                var videoPayload = JsonSerializer.Serialize(videoRequest, _serializerOptions);
+                var content = new StringContent(videoPayload, Encoding.UTF8, "application/json");
+                var response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    var deserialized = JsonSerializer.Deserialize<ChatResponse>(await response.Content.ReadAsStreamAsync());
+                    return new Message() { Content = deserialized.Choices[0].Message.Content, Role = Role.Assistant };
+                }
+                else
+                {
+                    throw new Exception($"Video recognition request failed with status code: {response.StatusCode}");
+                }
+            }
+        }
+
+        /// <summary>
         /// Generates an image from the prompt
         /// </summary>
         /// <param name="prompt">Description of the image to be generated</param>
-        /// <param name="steps">Steps for the algorith</param>
+        /// <param name="steps">Steps for the algorithm</param>
         /// <returns>URL of the generated image</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>

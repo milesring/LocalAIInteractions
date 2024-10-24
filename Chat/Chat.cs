@@ -27,6 +27,8 @@ namespace LocalAIInteractions.Chat
         public string Type { get; set; }
         [JsonPropertyName("image_url")]
         public ImageUrl Image { get; set; }
+        [JsonPropertyName("video_url")]
+        public ImageUrl Video { get; set; }
     }
 
     public class ImageUrl
