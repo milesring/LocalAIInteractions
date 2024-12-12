@@ -1,6 +1,7 @@
 ﻿using LocalAIInteractions.Chat;
 using LocalAIInteractions.Images;
 using LocalAIInteractions.Model;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -33,7 +34,7 @@ namespace LocalAIInteractions
 
         public APIClient()
         {
-            
+
         }
         public APIClient(string hostName, string port)
         {
@@ -58,7 +59,7 @@ namespace LocalAIInteractions
         /// <exception cref="Exception"></exception>
         /// <exception cref="HttpRequestException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task<Message> Chat(string message, string model = null, double temperature = 0.7, ChatConversation existingConversation = null)
+        public async Task<Message> Chat(string message, string model = null, double temperature = 0.7, ChatConversation existingConversation = null, string apiKey = null)
         {
             CheckEndpointVariables();
             model = model ?? Models.Gemma2;
@@ -69,6 +70,14 @@ namespace LocalAIInteractions
                 {
                     client.Timeout = TimeSpan.FromSeconds(Timeout);
                 }
+
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                    //api key usage infers openwebui usage, adjust api endpoint as necessary
+                    Endpoints.Endpoints.Version = "api";
+                }
+
                 var request = new ChatRequest()
                 {
                     Model = model,
@@ -96,7 +105,8 @@ namespace LocalAIInteractions
                 var content = new StringContent(payload, Encoding.UTF8, "application/json");
                 try
                 {
-                    var response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
+                    HttpResponseMessage? response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
+
                     if (response.IsSuccessStatusCode)
                     {
                         var deserialized = JsonSerializer.Deserialize<ChatResponse>(await response.Content.ReadAsStreamAsync());
@@ -150,17 +160,17 @@ namespace LocalAIInteractions
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="FileNotFoundException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<Message> RecognizeImage(string imagePath, string prompt = null ,string model = null)
+        public async Task<Message> RecognizeImage(string imagePath, string prompt = null, string model = null, string apiKey = null)
         {
             CheckEndpointVariables();
-            model = string.IsNullOrWhiteSpace(model) ? "llava-llama-3-8b-v1_1" : model;
+            model = string.IsNullOrWhiteSpace(model) ? "gpt-4o" : model;
             prompt = string.IsNullOrWhiteSpace(prompt) ? "Describe this image" : prompt;
             if (string.IsNullOrWhiteSpace(imagePath))
             {
                 throw new ArgumentNullException(imagePath);
             }
             bool isUrl = false;
-            if(!(new Uri(imagePath)).Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) && Uri.IsWellFormedUriString(imagePath, UriKind.RelativeOrAbsolute))
+            if (!(new Uri(imagePath)).Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) && Uri.IsWellFormedUriString(imagePath, UriKind.RelativeOrAbsolute))
             {
                 isUrl = true;
             }
@@ -174,6 +184,13 @@ namespace LocalAIInteractions
                 if (Timeout > 0)
                 {
                     client.Timeout = TimeSpan.FromSeconds(Timeout);
+                }
+
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                    //api key usage infers openwebui usage, adjust api endpoint as necessary
+                    Endpoints.Endpoints.Version = "api";
                 }
                 var imageContent = new ImageContent()
                 {
@@ -219,7 +236,9 @@ namespace LocalAIInteractions
 
                 var imagePayload = JsonSerializer.Serialize(imageRequest, _serializerOptions);
                 var content = new StringContent(imagePayload, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
+
+                HttpResponseMessage? response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
+
                 if (response.IsSuccessStatusCode)
                 {
                     var deserialized = JsonSerializer.Deserialize<ChatResponse>(await response.Content.ReadAsStreamAsync());
@@ -232,99 +251,6 @@ namespace LocalAIInteractions
             }
         }
 
-        /// <summary>
-        /// Sends a video URL to the endpoint do be described
-        /// </summary>
-        /// <param name="videoPath">URL of video to be described</param>
-        /// <param name="prompt">Prompt for the endpoint to follow</param>
-        /// <param name="model">Model to be used</param>
-        /// <returns>Completed message</returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="FileNotFoundException"></exception>
-        /// <exception cref="Exception"></exception>
-        public async Task<Message> RecognizeVideo(string videoPath, string prompt = null, string model = null)
-        {
-            CheckEndpointVariables();
-            model = string.IsNullOrWhiteSpace(model) ? "gpt-4o" : model;
-            prompt = string.IsNullOrWhiteSpace(prompt) ? "Describe this video" : prompt;
-            if (string.IsNullOrWhiteSpace(videoPath))
-            {
-                throw new ArgumentNullException(videoPath);
-            }
-            bool isUrl = false;
-            if (!(new Uri(videoPath)).Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) && Uri.IsWellFormedUriString(videoPath, UriKind.RelativeOrAbsolute))
-            {
-                isUrl = true;
-            }
-            else if (!File.Exists(videoPath))
-            {
-                throw new FileNotFoundException(videoPath);
-            }
-
-            using (var client = new HttpClient())
-            {
-                if (Timeout > 0)
-                {
-                    client.Timeout = TimeSpan.FromSeconds(Timeout);
-                }
-                var imageContent = new ImageContent()
-                {
-                    Type = "video_url"
-                };
-
-
-                //only support url for now
-                if (isUrl)
-                {
-                    imageContent.Video = new ImageUrl()
-                    {
-                        Url = videoPath
-                    };
-                }
-                //else
-                //{
-                //    var extension = Path.GetExtension(videoPath).Substring(1);
-                //    var mimeType = _mimeTypes[extension];
-                //    var imageBytes = Utility.Image.EncodeImageToBase64(videoPath);
-                //    imageContent.Image = new ImageUrl()
-                //    {
-                //        Url = $"data:image/{mimeType};base64,{imageBytes}"
-                //    };
-                //}
-
-                var videoRequest = new ImageChatRequest()
-                {
-                    Model = model,
-                    Messages =
-                    [
-                        new ImageMessage(){
-                            Role = Role.User,
-                            Content =
-                            [
-                                new ImageContent(){
-                                    Type = "text",
-                                    Text = prompt
-                                },
-                                imageContent
-                            ]
-                        }
-                    ]
-                };
-
-                var videoPayload = JsonSerializer.Serialize(videoRequest, _serializerOptions);
-                var content = new StringContent(videoPayload, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
-                if (response.IsSuccessStatusCode)
-                {
-                    var deserialized = JsonSerializer.Deserialize<ChatResponse>(await response.Content.ReadAsStreamAsync());
-                    return new Message() { Content = deserialized.Choices[0].Message.Content, Role = Role.Assistant };
-                }
-                else
-                {
-                    throw new Exception($"Video recognition request failed with status code: {response.StatusCode}");
-                }
-            }
-        }
 
         /// <summary>
         /// Generates an image from the prompt
@@ -334,7 +260,7 @@ namespace LocalAIInteractions
         /// <returns>URL of the generated image</returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>
-        public async Task<string> GenerateImage(string prompt, int steps = 25)
+        public async Task<string> GenerateImage(string prompt, int steps = 25, string apiKey = null)
         {
             CheckEndpointVariables();
 
@@ -348,6 +274,13 @@ namespace LocalAIInteractions
                 {
                     client.Timeout = TimeSpan.FromSeconds(Timeout);
                 }
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                    //api key usage infers openwebui usage, adjust api endpoint as necessary
+                    Endpoints.Endpoints.Version = "api";
+                }
+
                 var imageRequest = new ImageRequest()
                 {
                     Model = Models.StableDiffisuion,
