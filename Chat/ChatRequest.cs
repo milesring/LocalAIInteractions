@@ -10,6 +10,8 @@ namespace LocalAIInteractions.Chat
         public Message[] Messages { get; set; }
         [JsonPropertyName("temperature")]
         public double Temperature { get; set; } = 0.7;
+        [JsonPropertyName("files")]
+        public File[] Files { get; set; }
     }
 
     public class ImageChatRequest

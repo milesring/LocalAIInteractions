@@ -35,6 +35,16 @@ namespace LocalAIInteractions.Chat
     {
         [JsonPropertyName("url")]
         public string Url { get; set; }
+        [JsonPropertyName("detail")]
+        public string Detail { get; set; }
+    }
+
+    public class File
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
     }
 
     public static class Role
