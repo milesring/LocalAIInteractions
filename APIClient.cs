@@ -2,6 +2,7 @@
 using LocalAIInteractions.Images;
 using LocalAIInteractions.Model;
 using System.Net.Http.Headers;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -59,7 +60,7 @@ namespace LocalAIInteractions
         /// <exception cref="Exception"></exception>
         /// <exception cref="HttpRequestException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task<Message> Chat(string message, string model = null, double temperature = 0.7, ChatConversation existingConversation = null, string apiKey = null)
+        public async Task<Message> Chat(string message, string model = null, double temperature = 0.7, ChatConversation existingConversation = null, string apiKey = null, List<Chat.File> files = null)
         {
             CheckEndpointVariables();
             model = model ?? Models.Gemma2;
@@ -83,6 +84,11 @@ namespace LocalAIInteractions
                     Model = model,
                     Temperature = temperature
                 };
+
+                if (files != null && files.Count > 0)
+                {
+                    request.Files = files.ToArray();
+                }
                 var userMessage = new Message()
                 {
                     Role = Role.User,
@@ -174,7 +180,7 @@ namespace LocalAIInteractions
             {
                 isUrl = true;
             }
-            else if (!File.Exists(imagePath))
+            else if (!System.IO.File.Exists(imagePath))
             {
                 throw new FileNotFoundException(imagePath);
             }
@@ -278,15 +284,15 @@ namespace LocalAIInteractions
                 {
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
                     //api key usage infers openwebui usage, adjust api endpoint as necessary
-                    Endpoints.Endpoints.Version = "api";
+                    Endpoints.Endpoints.Version = "api/v1";
                 }
 
                 var imageRequest = new ImageRequest()
                 {
-                    Model = Models.StableDiffisuion,
-                    N = 1,
                     Prompt = prompt,
-                    Steps = steps
+                    N = 1,
+                    Size = "512x512",
+                    Steps = 50
                 };
 
                 var payload = JsonSerializer.Serialize(imageRequest, _serializerOptions);
@@ -294,8 +300,8 @@ namespace LocalAIInteractions
                 var response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Image}", content);
                 if (response.IsSuccessStatusCode)
                 {
-                    var deserialized = JsonSerializer.Deserialize<ImageResponse>(await response.Content.ReadAsStreamAsync());
-                    return deserialized?.Data[0].URL;
+                    var deserialized = JsonSerializer.Deserialize<OpenWebUIImageResponse[]>(await response.Content.ReadAsStreamAsync());
+                    return $"{Hostname}:{Port}{deserialized?[0].Url}";
                 }
                 else
                 {
@@ -303,5 +309,6 @@ namespace LocalAIInteractions
                 }
             }
         }
+
     }
 }

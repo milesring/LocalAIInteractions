@@ -24,4 +24,11 @@ namespace LocalAIInteractions.Images
         [JsonPropertyName(name: "url")]
         public string URL { get; set; }
     }
+
+    public class OpenWebUIImageResponse
+    {
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+    }
+
 }
