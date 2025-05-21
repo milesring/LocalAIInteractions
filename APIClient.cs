@@ -37,6 +37,11 @@ namespace LocalAIInteractions
         {
 
         }
+        public APIClient(string hostName)
+        {
+            Hostname = hostName;
+        }
+
         public APIClient(string hostName, string port)
         {
             Hostname = hostName;
@@ -60,10 +65,14 @@ namespace LocalAIInteractions
         /// <exception cref="Exception"></exception>
         /// <exception cref="HttpRequestException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
         public async Task<Message> Chat(string message, string model = null, double temperature = 0.7, ChatConversation existingConversation = null, string apiKey = null, List<Chat.File> files = null)
         {
             CheckEndpointVariables();
-            model = model ?? Models.Gemma2;
+            if (string.IsNullOrWhiteSpace(model))
+            {
+                throw new ArgumentNullException(nameof(model), "Model must be set");
+            }
 
             using (var client = new HttpClient())
             {
@@ -111,7 +120,8 @@ namespace LocalAIInteractions
                 var content = new StringContent(payload, Encoding.UTF8, "application/json");
                 try
                 {
-                    HttpResponseMessage? response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
+                    string host = $"{Hostname}{(string.IsNullOrWhiteSpace(Port) ? string.Empty : $":{Port}")}";
+                    HttpResponseMessage? response = await client.PostAsync($"{host}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
 
                     if (response.IsSuccessStatusCode)
                     {
@@ -144,12 +154,9 @@ namespace LocalAIInteractions
                 throw new ArgumentException("Hostname must be set");
             }
 
-            if (string.IsNullOrWhiteSpace(Port))
-            {
-                throw new ArgumentException("Port must be set");
-            }
+            string host = $"{Hostname}{(string.IsNullOrWhiteSpace(Port) ? string.Empty : $":{Port}")}";
 
-            if (!Uri.IsWellFormedUriString($"{Hostname}:{Port}", UriKind.RelativeOrAbsolute))
+            if (!Uri.IsWellFormedUriString(host, UriKind.RelativeOrAbsolute))
             {
                 throw new ArgumentException("Hostname must be a well formed URI");
             }
@@ -243,7 +250,8 @@ namespace LocalAIInteractions
                 var imagePayload = JsonSerializer.Serialize(imageRequest, _serializerOptions);
                 var content = new StringContent(imagePayload, Encoding.UTF8, "application/json");
 
-                HttpResponseMessage? response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
+                string host = $"{Hostname}{(string.IsNullOrWhiteSpace(Port) ? string.Empty : $":{Port}")}";
+                HttpResponseMessage? response = await client.PostAsync($"{host}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Chat}", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -297,7 +305,8 @@ namespace LocalAIInteractions
 
                 var payload = JsonSerializer.Serialize(imageRequest, _serializerOptions);
                 var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync($"{Hostname}:{Port}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Image}", content);
+                string host = $"{Hostname}{(string.IsNullOrWhiteSpace(Port) ? string.Empty : $":{Port}")}";
+                var response = await client.PostAsync($"{host}/{Endpoints.Endpoints.Version}/{Endpoints.Endpoints.Image}", content);
                 if (response.IsSuccessStatusCode)
                 {
                     var deserialized = JsonSerializer.Deserialize<OpenWebUIImageResponse[]>(await response.Content.ReadAsStreamAsync());
