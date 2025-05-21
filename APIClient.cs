@@ -42,6 +42,12 @@ namespace LocalAIInteractions
             Hostname = hostName;
         }
 
+        public APIClient(string hostName, int timeout)
+        {
+            Hostname = hostName;
+            Timeout = timeout;
+        }
+
         public APIClient(string hostName, string port)
         {
             Hostname = hostName;
