@@ -316,7 +316,8 @@ namespace LocalAIInteractions
                 if (response.IsSuccessStatusCode)
                 {
                     var deserialized = JsonSerializer.Deserialize<OpenWebUIImageResponse[]>(await response.Content.ReadAsStreamAsync());
-                    return $"{Hostname}:{Port}{deserialized?[0].Url}";
+
+                    return $"{host}{deserialized?[0].Url}";
                 }
                 else
                 {
